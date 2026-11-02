@@ -1,0 +1,605 @@
+{
+  "info": {
+    "_postman_id": "166733aa-1f37-4907-a927-a3f9d4d93a47",
+    "name": "Backend Challenge - User Management API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Echo User Management API. Start the API and MongoDB, then run requests in numerical order or use Collection Runner. No environment import is required. base_url defaults to http://localhost:8080. Register generates fresh demo emails and saves user_id; Login saves access_token. Business input is JSON body only; JWT uses Authorization. Expected 401/403 requests have passing assertions for those statuses. The final cleanup requests delete both demo accounts created by this run. Use a local/test database."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    {
+      "key": "name",
+      "value": "Postman Primary User",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "PostmanDemo123!",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "other_access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "updated_email",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1 Authentication",
+      "item": [
+        {
+          "name": "01 Register primary user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/register",
+            "description": "Start here. Generates fresh unique demo emails for each run and resets saved IDs/tokens. Saves user_id after successful registration.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{name}}\",\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runID = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.collectionVariables.set('email', 'postman.' + runID + '@example.com');",
+                  "pm.collectionVariables.set('other_email', 'postman.other.' + runID + '@example.com');",
+                  "pm.collectionVariables.set('updated_email', 'postman.updated.' + runID + '@example.com');",
+                  "['access_token', 'user_id', 'other_user_id', 'other_access_token'].forEach(function (key) { pm.collectionVariables.set(key, ''); });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"No password fields in response\", function () {",
+                  "    const rows = Array.isArray(pm.response.json()) ? pm.response.json() : [pm.response.json()];",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row).not.to.have.property(\"password\");",
+                  "        pm.expect(row).not.to.have.property(\"password_hash\");",
+                  "        pm.expect(row).not.to.have.property(\"PasswordHash\");",
+                  "    });",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"user_id\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "02 Login primary user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/login",
+            "description": "Saves access_token. Protected requests inherit bearer authentication from the collection.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Bearer token returned', function () {",
+                  "        pm.expect(response.access_token).to.be.a('string').and.not.empty;",
+                  "        pm.expect(response.token_type).to.eql('Bearer');",
+                  "        pm.expect(response.expires_in).to.be.above(0);",
+                  "    });",
+                  "    pm.collectionVariables.set('access_token', response.access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2 User operations",
+      "item": [
+        {
+          "name": "03 Create secondary user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Creates a second account using the primary user token. Saves other_user_id without overwriting user_id.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Secondary User\",\n  \"email\": \"{{other_email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 201\", function () { pm.response.to.have.status(201); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"No password fields in response\", function () {",
+                  "    const rows = Array.isArray(pm.response.json()) ? pm.response.json() : [pm.response.json()];",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row).not.to.have.property(\"password\");",
+                  "        pm.expect(row).not.to.have.property(\"password_hash\");",
+                  "        pm.expect(row).not.to.have.property(\"PasswordHash\");",
+                  "    });",
+                  "});",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set(\"other_user_id\", pm.response.json().id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "04 Get primary user",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users/get",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"No password fields in response\", function () {",
+                  "    const rows = Array.isArray(pm.response.json()) ? pm.response.json() : [pm.response.json()];",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row).not.to.have.property(\"password\");",
+                  "        pm.expect(row).not.to.have.property(\"password_hash\");",
+                  "        pm.expect(row).not.to.have.property(\"PasswordHash\");",
+                  "    });",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Correct user returned\", function () { pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get(\"user_id\")); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "05 List users",
+          "request": {
+            "method": "GET",
+            "header": [
+
+            ],
+            "url": "{{base_url}}/users",
+            "description": ""
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"No password fields in response\", function () {",
+                  "    const rows = Array.isArray(pm.response.json()) ? pm.response.json() : [pm.response.json()];",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row).not.to.have.property(\"password\");",
+                  "        pm.expect(row).not.to.have.property(\"password_hash\");",
+                  "        pm.expect(row).not.to.have.property(\"PasswordHash\");",
+                  "    });",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Users returned as an array\", function () { pm.expect(pm.response.json()).to.be.an(\"array\"); });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "06 Cannot update another user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Expected 403. Uses the primary token with the secondary user ID to verify ownership enforcement.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{other_user_id}}\",\n  \"name\": \"Must not be applied\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 403\", function () { pm.response.to.have.status(403); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"Error message is present\", function () { pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "07 Reject missing JWT",
+          "request": {
+            "method": "GET",
+            "header": [
+
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Expected 401. Overrides inherited authentication with No Auth.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 401\", function () { pm.response.to.have.status(401); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"Error message is present\", function () { pm.expect(pm.response.json().error).to.be.a(\"string\").and.not.empty; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "08 Update primary user",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Updates the primary account. Updates the saved email so Login continues to work afterwards.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{user_id}}\",\n  \"name\": \"Postman Updated User\",\n  \"email\": \"{{updated_email}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"No password fields in response\", function () {",
+                  "    const rows = Array.isArray(pm.response.json()) ? pm.response.json() : [pm.response.json()];",
+                  "    rows.forEach(function (row) {",
+                  "        pm.expect(row).not.to.have.property(\"password\");",
+                  "        pm.expect(row).not.to.have.property(\"password_hash\");",
+                  "        pm.expect(row).not.to.have.property(\"PasswordHash\");",
+                  "    });",
+                  "});",
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.test('Changes persisted in response', function () {",
+                  "        pm.expect(response.name).to.eql('Postman Updated User');",
+                  "        pm.expect(response.email).to.eql(pm.collectionVariables.get('updated_email'));",
+                  "    });",
+                  "    pm.collectionVariables.set('email', response.email);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3 Cleanup (deletes demo accounts)",
+      "item": [
+        {
+          "name": "09 Login secondary user for cleanup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/auth/login",
+            "description": "Gets a separate token for deleting the secondary account. Does not replace the primary access_token.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{other_email}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Response is JSON\", function () { pm.response.to.be.json; });",
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set(\"other_access_token\", pm.response.json().access_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10 Delete secondary user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Deletes only the secondary account created by this run, using its own token.",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{other_access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{other_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", function () { pm.response.to.have.status(204); });",
+                  "if (pm.response.code === 204) {",
+                  "    pm.test('Response body is empty', function () { pm.expect(pm.response.text()).to.eql(''); });",
+                  "    pm.collectionVariables.set('other_access_token', '');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "11 Delete primary user",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": "{{base_url}}/users",
+            "description": "Run last: deletes the primary demo account and clears access_token. Run Register and Login again to start over.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"{{user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+
+          ],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status is 204\", function () { pm.response.to.have.status(204); });",
+                  "if (pm.response.code === 204) {",
+                  "    pm.test('Response body is empty', function () { pm.expect(pm.response.text()).to.eql(''); });",
+                  "    pm.collectionVariables.set('access_token', '');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
